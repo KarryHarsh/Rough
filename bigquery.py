@@ -1,36 +1,30 @@
-import os
-from google.cloud import bigquery
+import pathlib
+import re
 
-def execute_sql_file(sql_file_path, project_id, dataset_id):
-    # Initialize a BigQuery client
-    client = bigquery.Client(project=project_id)
+def replace_strings_in_sql_files(directory_path, source_str, destination_str):
+    # Create a Path object for the directory
+    directory = pathlib.Path(directory_path)
 
-    # Read the SQL query from the file
-    with open(sql_file_path, "r") as sql_file:
-        sql_query = sql_file.read()
+    # Use a list comprehension to find all .sql files in the directory
+    sql_files = [file for file in directory.glob("*.sql")]
 
-    # Run the SQL query
-    job_config = bigquery.QueryJobConfig()
-    job_config.use_legacy_sql = False  # Use standard SQL syntax
+    # Iterate through each SQL file and perform the replacement
+    for sql_file in sql_files:
+        with open(sql_file, "r") as file:
+            sql_content = file.read()
 
-    try:
-        query_job = client.query(sql_query, job_config=job_config)
-        query_job.result()  # Wait for the query to complete
-        print("Query executed successfully.")
-    except Exception as e:
-        print(f"Error executing the query: {str(e)}")
+        # Perform string replacements using regular expressions
+        sql_content = re.sub(r'fs_analytics_tbls', destination_str, sql_content)
+        sql_content = re.sub(r'ds_fraud_dmz', source_str, sql_content)
+
+        # Write the modified content back to the file
+        with open(sql_file, "w") as file:
+            file.write(sql_content)
 
 if __name__ == "__main__":
-    # Set your Google Cloud project ID
-    project_id = "your-project-id"
+    directory_path = "path/to/your/sql/files"  # Replace with your directory path
+    source_str = "{{source_dataset}}"
+    destination_str = "{{destination_dataset}}"
     
-    # Set the BigQuery dataset ID
-    dataset_id = "your-dataset-id"
-
-    # Specify the path to your SQL file
-    sql_file_path = "path/to/your/query.sql"
-
-    if not os.path.exists(sql_file_path):
-        print("SQL file does not exist.")
-    else:
-        execute_sql_file(sql_file_path, project_id, dataset_id)
+    replace_strings_in_sql_files(directory_path, source_str, destination_str)
+    print("String replacements completed.")
